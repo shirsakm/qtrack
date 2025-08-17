@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Marked Successfully</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            text-align: center;
+            background-color: #f5f5f5;
+        }
+        .success-container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .success-icon {
+            font-size: 64px;
+            color: #4CAF50;
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .message {
+            color: #666;
+            font-size: 18px;
+            margin-bottom: 30px;
+        }
+        .details {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        .detail-row {
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+        .detail-label {
+            font-weight: bold;
+            color: #333;
+        }
+        .detail-value {
+            color: #666;
+        }
+        .close-btn {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        .close-btn:hover {
+            background: #1976D2;
+        }
+    </style>
+</head>
+<body>
+    <div class="success-container">
+        <div class="success-icon">✓</div>
+        <h1>Attendance Marked Successfully!</h1>
+        <p class="message">Your attendance has been recorded for this session.</p>
+        
+        <div class="details" id="attendanceDetails">
+            <div class="detail-row">
+                <span class="detail-label">Student Name:</span>
+                <span class="detail-value" id="studentName">Loading...</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Email:</span>
+                <span class="detail-value" id="studentEmail">Loading...</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Roll Number:</span>
+                <span class="detail-value" id="rollNumber">Loading...</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Time:</span>
+                <span class="detail-value" id="timestamp">Loading...</span>
+            </div>
+        </div>
+        
+        <button class="close-btn" onclick="window.close()">Close</button>
+    </div>
+
+    <script>
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        // Update details if provided in URL
+        const name = urlParams.get('name');
+        const email = urlParams.get('email');
+        const roll = urlParams.get('roll');
+        
+        if (name) document.getElementById('studentName').textContent = name;
+        if (email) document.getElementById('studentEmail').textContent = email;
+        if (roll) document.getElementById('rollNumber').textContent = roll;
+        
+        // Set current timestamp
+        document.getElementById('timestamp').textContent = new Date().toLocaleString();
+        
+        // Auto-close after 10 seconds
+        setTimeout(() => {
+            window.close();
+        }, 10000);
+    </script>
+</body>
+</html>

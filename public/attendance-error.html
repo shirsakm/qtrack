@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Error</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            text-align: center;
+            background-color: #f5f5f5;
+        }
+        .error-container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .error-icon {
+            font-size: 64px;
+            color: #f44336;
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .message {
+            color: #666;
+            font-size: 18px;
+            margin-bottom: 30px;
+        }
+        .error-details {
+            background: #ffebee;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border-left: 4px solid #f44336;
+        }
+        .error-code {
+            font-family: monospace;
+            font-weight: bold;
+            color: #d32f2f;
+        }
+        .retry-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        .retry-btn:hover {
+            background: #45a049;
+        }
+        .close-btn {
+            background: #757575;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        .close-btn:hover {
+            background: #616161;
+        }
+        .help-text {
+            margin-top: 30px;
+            padding: 20px;
+            background: #e3f2fd;
+            border-radius: 5px;
+            font-size: 14px;
+            color: #1976d2;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-icon">⚠</div>
+        <h1>Unable to Mark Attendance</h1>
+        <p class="message" id="errorMessage">An error occurred while processing your attendance.</p>
+        
+        <div class="error-details" id="errorDetails">
+            <div class="error-code" id="errorCode">UNKNOWN_ERROR</div>
+            <div id="errorDescription">Please try again or contact your instructor.</div>
+        </div>
+        
+        <button class="retry-btn" onclick="retryAttendance()">Try Again</button>
+        <button class="close-btn" onclick="window.close()">Close</button>
+        
+        <div class="help-text">
+            <strong>Common Issues:</strong><br>
+            • Make sure you're using your college email (@heritageit.edu.in)<br>
+            • Ensure you're enrolled in the system<br>
+            • Check if the QR code has expired (codes change every 30 seconds)<br>
+            • Contact your instructor if the problem persists
+        </div>
+    </div>
+
+    <script>
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        // Update error details if provided in URL
+        const errorCode = urlParams.get('code') || 'UNKNOWN_ERROR';
+        const errorMessage = urlParams.get('message') || 'An error occurred while processing your attendance.';
+        const sessionId = urlParams.get('session');
+        const token = urlParams.get('token');
+        
+        document.getElementById('errorCode').textContent = errorCode;
+        document.getElementById('errorMessage').textContent = errorMessage;
+        
+        // Set specific error descriptions
+        const errorDescriptions = {
+            'AUTH_FAILED': 'Authentication failed. Please make sure you\'re using your college Google account.',
+            'INVALID_EMAIL': 'Your email format is invalid. Must be firstname.lastname.branchyear@heritageit.edu.in',
+            'STUDENT_NOT_FOUND': 'Your email is not found in the student database. Please contact administration.',
+            'SESSION_EXPIRED': 'The attendance session has expired or the QR code is no longer valid.',
+            'ALREADY_MARKED': 'You have already marked attendance for this session.',
+            'MISSING_PARAMETERS': 'Invalid QR code or missing session information.',
+            'UNAUTHORIZED': 'You need to authenticate with your college Google account first.'
+        };
+        
+        const description = errorDescriptions[errorCode] || 'Please try again or contact your instructor.';
+        document.getElementById('errorDescription').textContent = description;
+        
+        function retryAttendance() {
+            if (sessionId && token) {
+                // Retry with the same session and token
+                window.location.href = `/attendance/mark?session=${sessionId}&token=${token}`;
+            } else {
+                // Go back to previous page
+                window.history.back();
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,241 @@
+const express = require('express');
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const databaseService = require('../services/DatabaseService');
+const Student = require('../models/Student');
+
+const router = express.Router();
+
+// Initialize services when needed
+let studentModel;
+
+const initializeServices = async () => {
+  if (!databaseService.isInitialized) {
+    await databaseService.initialize();
+  }
+  
+  if (!studentModel) {
+    studentModel = new Student(databaseService.getDatabase());
+  }
+};
+
+// Configure Google OAuth Strategy
+passport.use(new GoogleStrategy({
+  clientID: process.env.GOOGLE_CLIENT_ID,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  callbackURL: process.env.GOOGLE_CALLBACK_URL || "/auth/google/callback"
+}, async (accessToken, refreshToken, profile, done) => {
+  try {
+    // Initialize services
+    await initializeServices();
+    
+    // Extract email from Google profile
+    const email = profile.emails && profile.emails[0] ? profile.emails[0].value : null;
+    
+    if (!email) {
+      return done(null, false, { message: 'No email found in Google profile' });
+    }
+
+    // Validate email pattern for heritageit.edu.in domain
+    if (!Student.validateEmailPattern(email)) {
+      return done(null, false, { 
+        message: 'Invalid email format. Must be firstname.lastname.branchyear@heritageit.edu.in' 
+      });
+    }
+
+    // Check if student exists in database
+    const studentExists = await studentModel.exists(email);
+    if (!studentExists) {
+      return done(null, false, { 
+        message: 'Student not found in database. Please contact administration.' 
+      });
+    }
+
+    // Get student details
+    const student = await studentModel.findByEmail(email);
+    
+    // Create user object for session
+    const user = {
+      id: student.id,
+      email: student.email,
+      name: student.name,
+      rollNumber: student.roll_number,
+      branch: student.branch,
+      year: student.year,
+      googleId: profile.id
+    };
+
+    return done(null, user);
+  } catch (error) {
+    console.error('OAuth authentication error:', error);
+    return done(error, null);
+  }
+}));
+
+// Serialize user for session
+passport.serializeUser((user, done) => {
+  done(null, user.id);
+});
+
+// Deserialize user from session
+passport.deserializeUser(async (id, done) => {
+  try {
+    await initializeServices();
+    const student = await studentModel.findByEmail(id);
+    if (student) {
+      const user = {
+        id: student.id,
+        email: student.email,
+        name: student.name,
+        rollNumber: student.roll_number,
+        branch: student.branch,
+        year: student.year
+      };
+      done(null, user);
+    } else {
+      done(null, false);
+    }
+  } catch (error) {
+    done(error, null);
+  }
+});
+
+// Routes
+
+// Initiate Google OAuth
+router.get('/google', 
+  passport.authenticate('google', { 
+    scope: ['profile', 'email'] 
+  })
+);
+
+// Google OAuth callback
+router.get('/google/callback',
+  passport.authenticate('google', { 
+    failureRedirect: '/auth/failure',
+    failureFlash: true 
+  }),
+  (req, res) => {
+    // Successful authentication
+    // Check if there's a session parameter to redirect to attendance marking
+    const sessionId = req.query.state || req.session.pendingSessionId;
+    
+    if (sessionId) {
+      // Clear the pending session from session storage
+      delete req.session.pendingSessionId;
+      // Redirect to attendance marking with session ID
+      res.redirect(`/attendance/mark?session=${sessionId}`);
+    } else {
+      // No specific session, redirect to general success page
+      res.redirect('/auth/success');
+    }
+  }
+);
+
+// Authentication success page
+router.get('/success', (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.redirect('/auth/failure');
+  }
+  
+  res.json({
+    success: true,
+    message: 'Authentication successful',
+    user: {
+      name: req.user.name,
+      email: req.user.email,
+      rollNumber: req.user.rollNumber,
+      branch: req.user.branch,
+      year: req.user.year
+    }
+  });
+});
+
+// Authentication failure page
+router.get('/failure', (req, res) => {
+  const message = req.flash('error')[0] || 'Authentication failed';
+  const sessionId = req.query.session || req.session.pendingSessionId;
+  const token = req.query.token || req.session.pendingToken;
+  
+  // Clear pending session data
+  delete req.session.pendingSessionId;
+  delete req.session.pendingToken;
+  
+  // Redirect to error page
+  const errorUrl = `/attendance-error.html?code=AUTH_FAILED&message=${encodeURIComponent(message)}&session=${sessionId || ''}&token=${token || ''}`;
+  res.redirect(errorUrl);
+});
+
+// Logout route
+router.post('/logout', (req, res) => {
+  req.logout((err) => {
+    if (err) {
+      return res.status(500).json({
+        success: false,
+        error: {
+          code: 'LOGOUT_ERROR',
+          message: 'Error during logout'
+        }
+      });
+    }
+    
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({
+          success: false,
+          error: {
+            code: 'SESSION_DESTROY_ERROR',
+            message: 'Error destroying session'
+          }
+        });
+      }
+      
+      res.json({
+        success: true,
+        message: 'Logged out successfully'
+      });
+    });
+  });
+});
+
+// Check authentication status
+router.get('/status', (req, res) => {
+  if (req.isAuthenticated()) {
+    res.json({
+      authenticated: true,
+      user: {
+        name: req.user.name,
+        email: req.user.email,
+        rollNumber: req.user.rollNumber,
+        branch: req.user.branch,
+        year: req.user.year
+      }
+    });
+  } else {
+    res.json({
+      authenticated: false
+    });
+  }
+});
+
+// Middleware to check if user is authenticated
+const requireAuth = (req, res, next) => {
+  if (req.isAuthenticated()) {
+    return next();
+  }
+  
+  res.status(401).json({
+    success: false,
+    error: {
+      code: 'UNAUTHORIZED',
+      message: 'Authentication required'
+    }
+  });
+};
+
+// Export router and middleware
+module.exports = {
+  router,
+  requireAuth,
+  passport
+};
