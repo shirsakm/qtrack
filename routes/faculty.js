@@ -9,6 +9,12 @@ const {
   validateSessionInput,
   basicSecurityHeaders 
 } = require('../middleware/security');
+const { 
+  AppError, 
+  asyncHandler, 
+  handleDatabaseError 
+} = require('../middleware/errorHandler');
+const { createValidationMiddleware } = require('../middleware/validation');
 
 // Initialize services (DatabaseService is a singleton)
 let sessionService;
@@ -33,18 +39,13 @@ const initializeServices = async () => {
  * POST /api/faculty/sessions/start
  * Start a new attendance session
  */
-router.post('/sessions/start', basicSecurityHeaders, csrfProtection, validateSessionInput, async (req, res) => {
-  try {
+router.post('/sessions/start', 
+  basicSecurityHeaders, 
+  csrfProtection, 
+  createValidationMiddleware('sessionCreation'), 
+  asyncHandler(async (req, res) => {
     await initializeServices();
     const { facultyId, courseName, courseCode, section } = req.body;
-
-    // Validate required fields
-    if (!facultyId || !courseName || !courseCode || !section) {
-      return res.status(400).json({
-        success: false,
-        error: 'Missing required fields: facultyId, courseName, courseCode, section'
-      });
-    }
 
     // Start the session
     const result = await sessionService.startSession({
@@ -55,7 +56,10 @@ router.post('/sessions/start', basicSecurityHeaders, csrfProtection, validateSes
     });
 
     if (!result.success) {
-      return res.status(400).json(result);
+      if (result.error.includes('already has an active session')) {
+        throw new AppError('ACTIVE_SESSION_EXISTS');
+      }
+      throw new AppError('INTERNAL_ERROR', result.error);
     }
 
     // Start QR rotation with WebSocket callback
@@ -84,37 +88,40 @@ router.post('/sessions/start', basicSecurityHeaders, csrfProtection, validateSes
       },
       qrData: result.qrData
     });
-
-  } catch (error) {
-    console.error('Error starting session:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error'
-    });
-  }
-});
+  })
+);
 
 /**
  * POST /api/faculty/sessions/:sessionId/end
  * End an attendance session
  */
-router.post('/sessions/:sessionId/end', basicSecurityHeaders, csrfProtection, validateFacultyInput, async (req, res) => {
-  try {
+router.post('/sessions/:sessionId/end', 
+  basicSecurityHeaders, 
+  csrfProtection, 
+  createValidationMiddleware('facultyOperation'), 
+  asyncHandler(async (req, res) => {
     await initializeServices();
     const { sessionId } = req.params;
     const { facultyId } = req.body;
 
-    if (!facultyId) {
-      return res.status(400).json({
-        success: false,
-        error: 'Faculty ID is required'
-      });
+    // Validate session ID format
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(sessionId)) {
+      throw new AppError('INVALID_SESSION_ID');
     }
 
     const result = await sessionService.endSession(sessionId, facultyId);
 
     if (!result.success) {
-      return res.status(400).json(result);
+      if (result.error.includes('not found')) {
+        throw new AppError('SESSION_NOT_FOUND');
+      }
+      if (result.error.includes('Unauthorized')) {
+        throw new AppError('SESSION_UNAUTHORIZED');
+      }
+      if (result.error.includes('already ended')) {
+        throw new AppError('SESSION_INACTIVE');
+      }
+      throw new AppError('INTERNAL_ERROR', result.error);
     }
 
     // Notify faculty dashboard that session ended
@@ -136,49 +143,41 @@ router.post('/sessions/:sessionId/end', basicSecurityHeaders, csrfProtection, va
       },
       message: result.message
     });
-
-  } catch (error) {
-    console.error('Error ending session:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error'
-    });
-  }
-});
+  })
+);
 
 /**
  * GET /api/faculty/sessions/:sessionId/status
  * Get current session status and QR code data
  */
-router.get('/sessions/:sessionId/status', basicSecurityHeaders, async (req, res) => {
-  try {
+router.get('/sessions/:sessionId/status', 
+  basicSecurityHeaders, 
+  createValidationMiddleware('sessionQuery', 'query'),
+  asyncHandler(async (req, res) => {
     await initializeServices();
     const { sessionId } = req.params;
     const { facultyId } = req.query;
 
-    if (!facultyId) {
-      return res.status(400).json({
-        success: false,
-        error: 'Faculty ID is required'
-      });
+    // Validate session ID format
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(sessionId)) {
+      throw new AppError('INVALID_SESSION_ID');
     }
 
     const result = await sessionService.getSessionStatus(sessionId, facultyId);
 
     if (!result.success) {
-      return res.status(404).json(result);
+      if (result.error.includes('not found')) {
+        throw new AppError('SESSION_NOT_FOUND');
+      }
+      if (result.error.includes('Unauthorized')) {
+        throw new AppError('SESSION_UNAUTHORIZED');
+      }
+      throw new AppError('INTERNAL_ERROR', result.error);
     }
 
     res.json(result);
-
-  } catch (error) {
-    console.error('Error getting session status:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error'
-    });
-  }
-});
+  })
+);
 
 /**
  * GET /api/faculty/sessions/:sessionId/attendance

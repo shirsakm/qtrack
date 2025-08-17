@@ -1,6 +1,7 @@
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const csrf = require('csurf');
+const { AppError, securityLogger } = require('./errorHandler');
 
 /**
  * Rate limiting middleware for attendance marking
@@ -102,13 +103,11 @@ const csrfProtection = csrf({
  */
 const csrfErrorHandler = (err, req, res, next) => {
   if (err.code === 'EBADCSRFTOKEN') {
-    return res.status(403).json({
-      success: false,
-      error: {
-        code: 'CSRF_TOKEN_INVALID',
-        message: 'Invalid CSRF token. Please refresh the page and try again.'
-      }
-    });
+    // Log security event
+    securityLogger('CSRF_TOKEN_INVALID', { originalUrl: req.originalUrl })(req, res, () => {});
+    
+    const appError = new AppError('CSRF_TOKEN_INVALID');
+    return res.status(appError.status).json(appError.toJSON());
   }
   next(err);
 };
@@ -217,146 +216,101 @@ const basicSecurityHeaders = (req, res, next) => {
 
 /**
  * Input validation middleware for attendance marking
+ * @deprecated Use createValidationMiddleware('attendanceMarking') instead
  */
 const validateAttendanceInput = (req, res, next) => {
   const { sessionId, studentEmail, token } = req.body;
 
-  // Validate required fields
-  if (!sessionId || !studentEmail || !token) {
-    return res.status(400).json({
-      success: false,
-      error: {
-        code: 'MISSING_PARAMETERS',
-        message: 'Missing required fields: sessionId, studentEmail, token'
-      }
-    });
-  }
+  try {
+    // Validate required fields
+    if (!sessionId || !studentEmail || !token) {
+      throw new AppError('MISSING_PARAMETERS');
+    }
 
-  // Validate sessionId format (UUID)
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  if (!uuidRegex.test(sessionId)) {
-    return res.status(400).json({
-      success: false,
-      error: {
-        code: 'INVALID_SESSION_ID',
-        message: 'Invalid session ID format'
-      }
-    });
-  }
+    // Validate sessionId format (UUID)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(sessionId)) {
+      throw new AppError('INVALID_SESSION_ID');
+    }
 
-  // Validate email format
-  const emailRegex = /^[a-zA-Z]+\.[a-zA-Z]+\.[a-zA-Z]+\d{2}@heritageit\.edu\.in$/;
-  if (!emailRegex.test(studentEmail)) {
-    return res.status(400).json({
-      success: false,
-      error: {
-        code: 'INVALID_EMAIL_FORMAT',
-        message: 'Invalid email format. Must be firstname.lastname.branchyear@heritageit.edu.in'
-      }
-    });
-  }
+    // Validate email format
+    const emailRegex = /^[a-zA-Z]+\.[a-zA-Z]+\.[a-zA-Z]+\d{2}@heritageit\.edu\.in$/;
+    if (!emailRegex.test(studentEmail)) {
+      throw new AppError('INVALID_EMAIL_FORMAT');
+    }
 
-  // Validate token format (should be alphanumeric)
-  const tokenRegex = /^[a-zA-Z0-9]{32,}$/;
-  if (!tokenRegex.test(token)) {
-    return res.status(400).json({
-      success: false,
-      error: {
-        code: 'INVALID_TOKEN_FORMAT',
-        message: 'Invalid token format'
-      }
-    });
-  }
+    // Validate token format (should be alphanumeric)
+    const tokenRegex = /^[a-zA-Z0-9]{32,}$/;
+    if (!tokenRegex.test(token)) {
+      throw new AppError('INVALID_TOKEN_FORMAT');
+    }
 
-  next();
+    next();
+  } catch (error) {
+    next(error);
+  }
 };
 
 /**
  * Input validation middleware for faculty session operations
+ * @deprecated Use createValidationMiddleware('facultyOperation') instead
  */
 const validateFacultyInput = (req, res, next) => {
   const { facultyId } = req.body;
 
-  // Validate required faculty ID
-  if (!facultyId) {
-    return res.status(400).json({
-      success: false,
-      error: {
-        code: 'MISSING_FACULTY_ID',
-        message: 'Faculty ID is required'
-      }
-    });
-  }
+  try {
+    // Validate required faculty ID
+    if (!facultyId) {
+      throw new AppError('MISSING_PARAMETERS', 'Faculty ID is required');
+    }
 
-  // Validate faculty ID format (should be alphanumeric)
-  const facultyIdRegex = /^[a-zA-Z0-9_-]{3,50}$/;
-  if (!facultyIdRegex.test(facultyId)) {
-    return res.status(400).json({
-      success: false,
-      error: {
-        code: 'INVALID_FACULTY_ID',
-        message: 'Invalid faculty ID format'
-      }
-    });
-  }
+    // Validate faculty ID format (should be alphanumeric)
+    const facultyIdRegex = /^[a-zA-Z0-9_-]{3,50}$/;
+    if (!facultyIdRegex.test(facultyId)) {
+      throw new AppError('INVALID_FACULTY_ID');
+    }
 
-  next();
+    next();
+  } catch (error) {
+    next(error);
+  }
 };
 
 /**
  * Input validation middleware for session creation
+ * @deprecated Use createValidationMiddleware('sessionCreation') instead
  */
 const validateSessionInput = (req, res, next) => {
   const { facultyId, courseName, courseCode, section } = req.body;
 
-  // Validate required fields
-  if (!facultyId || !courseName || !courseCode || !section) {
-    return res.status(400).json({
-      success: false,
-      error: {
-        code: 'MISSING_PARAMETERS',
-        message: 'Missing required fields: facultyId, courseName, courseCode, section'
-      }
-    });
-  }
+  try {
+    // Validate required fields
+    if (!facultyId || !courseName || !courseCode || !section) {
+      throw new AppError('MISSING_PARAMETERS', 'Missing required fields: facultyId, courseName, courseCode, section');
+    }
 
-  // Validate course name (alphanumeric with spaces, 3-100 chars)
-  const courseNameRegex = /^[a-zA-Z0-9\s]{3,100}$/;
-  if (!courseNameRegex.test(courseName)) {
-    return res.status(400).json({
-      success: false,
-      error: {
-        code: 'INVALID_COURSE_NAME',
-        message: 'Course name must be 3-100 characters, alphanumeric with spaces'
-      }
-    });
-  }
+    // Validate course name (alphanumeric with spaces, 3-100 chars)
+    const courseNameRegex = /^[a-zA-Z0-9\s]{3,100}$/;
+    if (!courseNameRegex.test(courseName)) {
+      throw new AppError('INVALID_COURSE_NAME');
+    }
 
-  // Validate course code (alphanumeric with dashes/underscores, 2-20 chars)
-  const courseCodeRegex = /^[a-zA-Z0-9_-]{2,20}$/;
-  if (!courseCodeRegex.test(courseCode)) {
-    return res.status(400).json({
-      success: false,
-      error: {
-        code: 'INVALID_COURSE_CODE',
-        message: 'Course code must be 2-20 characters, alphanumeric with dashes/underscores'
-      }
-    });
-  }
+    // Validate course code (alphanumeric with dashes/underscores, 2-20 chars)
+    const courseCodeRegex = /^[a-zA-Z0-9_-]{2,20}$/;
+    if (!courseCodeRegex.test(courseCode)) {
+      throw new AppError('INVALID_COURSE_CODE');
+    }
 
-  // Validate section (alphanumeric, 1-10 chars)
-  const sectionRegex = /^[a-zA-Z0-9]{1,10}$/;
-  if (!sectionRegex.test(section)) {
-    return res.status(400).json({
-      success: false,
-      error: {
-        code: 'INVALID_SECTION',
-        message: 'Section must be 1-10 characters, alphanumeric'
-      }
-    });
-  }
+    // Validate section (alphanumeric, 1-10 chars)
+    const sectionRegex = /^[a-zA-Z0-9]{1,10}$/;
+    if (!sectionRegex.test(section)) {
+      throw new AppError('INVALID_SECTION');
+    }
 
-  next();
+    next();
+  } catch (error) {
+    next(error);
+  }
 };
 
 /**
@@ -439,13 +393,15 @@ const suspiciousActivityDetection = (req, res, next) => {
     
     // If too many suspicious activities, block temporarily
     if (activity.suspiciousCount > 3 && now - activity.lastSuspiciousActivity < 5 * 60 * 1000) {
-      return res.status(429).json({
-        success: false,
-        error: {
-          code: 'SUSPICIOUS_ACTIVITY_BLOCKED',
-          message: 'Suspicious activity detected. Access temporarily blocked.'
-        }
-      });
+      // Log security event
+      securityLogger('SUSPICIOUS_ACTIVITY_BLOCKED', { 
+        ip, 
+        requestsInWindow, 
+        suspiciousCount: activity.suspiciousCount 
+      })(req, res, () => {});
+      
+      const appError = new AppError('SUSPICIOUS_ACTIVITY_BLOCKED');
+      return res.status(appError.status).json(appError.toJSON());
     }
   }
   
@@ -465,7 +421,7 @@ const suspiciousActivityDetection = (req, res, next) => {
 /**
  * Enhanced request logging for security monitoring
  */
-const securityLogger = (req, res, next) => {
+const securityRequestLogger = (req, res, next) => {
   const ip = req.ip || req.connection.remoteAddress;
   const userAgent = req.get('User-Agent') || 'Unknown';
   const method = req.method;
@@ -513,5 +469,5 @@ module.exports = {
   validateSessionInput,
   sanitizeInput,
   suspiciousActivityDetection,
-  securityLogger
+  securityLogger: securityRequestLogger
 };
