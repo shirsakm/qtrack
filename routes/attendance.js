@@ -9,7 +9,8 @@ const {
   strictAttendanceRateLimit,
   validateAttendanceInput,
   attendanceCSRFProtection,
-  basicSecurityHeaders 
+  basicSecurityHeaders,
+  apiRateLimit 
 } = require('../middleware/security');
 
 // Initialize services (DatabaseService is a singleton)
@@ -35,7 +36,7 @@ const initializeServices = async () => {
  * GET /attendance/mark
  * Landing page for QR code - initiates authentication flow
  */
-router.get('/mark', async (req, res) => {
+router.get('/mark', basicSecurityHeaders, async (req, res) => {
   try {
     await initializeServices();
     const { session: sessionId, token } = req.query;
@@ -82,7 +83,7 @@ router.get('/mark', async (req, res) => {
  * GET /attendance/submit
  * Submit attendance after authentication (requires auth)
  */
-router.get('/submit', requireAuth, async (req, res) => {
+router.get('/submit', basicSecurityHeaders, requireAuth, async (req, res) => {
   try {
     await initializeServices();
     const { session: sessionId, token } = req.query;
@@ -366,7 +367,7 @@ router.post('/mark', basicSecurityHeaders, attendanceRateLimit, attendanceCSRFPr
  * GET /api/attendance/session/:sessionId
  * Get attendance for a specific session (public endpoint for verification)
  */
-router.get('/session/:sessionId', async (req, res) => {
+router.get('/session/:sessionId', basicSecurityHeaders, apiRateLimit, async (req, res) => {
   try {
     await initializeServices();
     const { sessionId } = req.params;

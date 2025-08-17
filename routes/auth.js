@@ -104,14 +104,14 @@ passport.deserializeUser(async (id, done) => {
 // Routes
 
 // Initiate Google OAuth
-router.get('/google', 
+router.get('/google', basicSecurityHeaders,
   passport.authenticate('google', { 
     scope: ['profile', 'email'] 
   })
 );
 
 // Google OAuth callback
-router.get('/google/callback',
+router.get('/google/callback', basicSecurityHeaders,
   passport.authenticate('google', { 
     failureRedirect: '/auth/failure',
     failureFlash: true 
@@ -134,7 +134,7 @@ router.get('/google/callback',
 );
 
 // Authentication success page
-router.get('/success', (req, res) => {
+router.get('/success', basicSecurityHeaders, (req, res) => {
   if (!req.isAuthenticated()) {
     return res.redirect('/auth/failure');
   }
@@ -153,7 +153,7 @@ router.get('/success', (req, res) => {
 });
 
 // Authentication failure page
-router.get('/failure', (req, res) => {
+router.get('/failure', basicSecurityHeaders, (req, res) => {
   const message = req.flash('error')[0] || 'Authentication failed';
   const sessionId = req.query.session || req.session.pendingSessionId;
   const token = req.query.token || req.session.pendingToken;
@@ -200,7 +200,7 @@ router.post('/logout', basicSecurityHeaders, csrfProtection, (req, res) => {
 });
 
 // Check authentication status
-router.get('/status', (req, res) => {
+router.get('/status', basicSecurityHeaders, (req, res) => {
   if (req.isAuthenticated()) {
     res.json({
       authenticated: true,

@@ -180,8 +180,17 @@ const securityHeaders = helmet({
   dnsPrefetchControl: { allow: false },
   // IE No Open
   ieNoOpen: true,
-  // Don't infer content type
-  noSniff: true
+  // Permissions Policy (formerly Feature Policy)
+  permissionsPolicy: {
+    camera: [],
+    microphone: [],
+    geolocation: ['self'],
+    payment: [],
+    usb: [],
+    accelerometer: [],
+    gyroscope: [],
+    magnetometer: []
+  }
 });
 
 /**
@@ -359,7 +368,9 @@ const sanitizeInput = (req, res, next) => {
     if (typeof str !== 'string') return str;
     return str.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
               .replace(/javascript:/gi, '')
-              .replace(/on\w+\s*=/gi, '');
+              .replace(/on\w+\s*=/gi, '')
+              .replace(/data:text\/html/gi, '')
+              .replace(/vbscript:/gi, '');
   };
 
   // Recursively sanitize object properties
@@ -389,6 +400,103 @@ const sanitizeInput = (req, res, next) => {
   next();
 };
 
+/**
+ * Advanced IP tracking and suspicious activity detection
+ */
+const ipActivityTracker = new Map();
+
+const suspiciousActivityDetection = (req, res, next) => {
+  const ip = req.ip || req.connection.remoteAddress;
+  const now = Date.now();
+  const windowMs = 60 * 1000; // 1 minute window
+  
+  if (!ipActivityTracker.has(ip)) {
+    ipActivityTracker.set(ip, {
+      requests: [],
+      suspiciousCount: 0,
+      lastSuspiciousActivity: 0
+    });
+  }
+  
+  const activity = ipActivityTracker.get(ip);
+  
+  // Clean old requests (older than window)
+  activity.requests = activity.requests.filter(timestamp => now - timestamp < windowMs);
+  
+  // Add current request
+  activity.requests.push(now);
+  
+  // Check for suspicious patterns
+  const requestsInWindow = activity.requests.length;
+  const isSuspicious = requestsInWindow > 20; // More than 20 requests per minute
+  
+  if (isSuspicious) {
+    activity.suspiciousCount++;
+    activity.lastSuspiciousActivity = now;
+    
+    // Log suspicious activity
+    console.warn(`Suspicious activity detected from IP ${ip}: ${requestsInWindow} requests in 1 minute`);
+    
+    // If too many suspicious activities, block temporarily
+    if (activity.suspiciousCount > 3 && now - activity.lastSuspiciousActivity < 5 * 60 * 1000) {
+      return res.status(429).json({
+        success: false,
+        error: {
+          code: 'SUSPICIOUS_ACTIVITY_BLOCKED',
+          message: 'Suspicious activity detected. Access temporarily blocked.'
+        }
+      });
+    }
+  }
+  
+  // Clean up old entries periodically
+  if (Math.random() < 0.01) { // 1% chance to clean up
+    const cutoff = now - 24 * 60 * 60 * 1000; // 24 hours ago
+    for (const [ip, data] of ipActivityTracker.entries()) {
+      if (data.lastSuspiciousActivity < cutoff && data.requests.length === 0) {
+        ipActivityTracker.delete(ip);
+      }
+    }
+  }
+  
+  next();
+};
+
+/**
+ * Enhanced request logging for security monitoring
+ */
+const securityLogger = (req, res, next) => {
+  const ip = req.ip || req.connection.remoteAddress;
+  const userAgent = req.get('User-Agent') || 'Unknown';
+  const method = req.method;
+  const url = req.originalUrl;
+  const timestamp = new Date().toISOString();
+  
+  // Log security-relevant requests
+  if (method !== 'GET' || url.includes('/attendance/') || url.includes('/api/')) {
+    console.log(`[SECURITY] ${timestamp} - ${ip} - ${method} ${url} - ${userAgent}`);
+  }
+  
+  // Check for common attack patterns
+  const suspiciousPatterns = [
+    /\.\.\//,  // Directory traversal
+    /<script/i, // XSS attempts
+    /union.*select/i, // SQL injection
+    /javascript:/i, // JavaScript injection
+    /eval\(/i, // Code injection
+    /exec\(/i  // Command injection
+  ];
+  
+  const requestString = JSON.stringify(req.body) + JSON.stringify(req.query) + url;
+  const hasSuspiciousPattern = suspiciousPatterns.some(pattern => pattern.test(requestString));
+  
+  if (hasSuspiciousPattern) {
+    console.warn(`[SECURITY ALERT] ${timestamp} - Suspicious pattern detected from ${ip}: ${method} ${url}`);
+  }
+  
+  next();
+};
+
 module.exports = {
   attendanceRateLimit,
   strictAttendanceRateLimit,
@@ -403,5 +511,7 @@ module.exports = {
   validateAttendanceInput,
   validateFacultyInput,
   validateSessionInput,
-  sanitizeInput
+  sanitizeInput,
+  suspiciousActivityDetection,
+  securityLogger
 };

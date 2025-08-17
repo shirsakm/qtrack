@@ -150,7 +150,7 @@ router.post('/sessions/:sessionId/end', basicSecurityHeaders, csrfProtection, va
  * GET /api/faculty/sessions/:sessionId/status
  * Get current session status and QR code data
  */
-router.get('/sessions/:sessionId/status', async (req, res) => {
+router.get('/sessions/:sessionId/status', basicSecurityHeaders, async (req, res) => {
   try {
     await initializeServices();
     const { sessionId } = req.params;
@@ -184,7 +184,7 @@ router.get('/sessions/:sessionId/status', async (req, res) => {
  * GET /api/faculty/sessions/:sessionId/attendance
  * Get real-time attendance data for a session
  */
-router.get('/sessions/:sessionId/attendance', async (req, res) => {
+router.get('/sessions/:sessionId/attendance', basicSecurityHeaders, async (req, res) => {
   try {
     await initializeServices();
     const { sessionId } = req.params;
@@ -236,7 +236,7 @@ router.get('/sessions/:sessionId/attendance', async (req, res) => {
  * GET /api/faculty/sessions/:sessionId/export
  * Export attendance data in JSON format
  */
-router.get('/sessions/:sessionId/export', async (req, res) => {
+router.get('/sessions/:sessionId/export', basicSecurityHeaders, async (req, res) => {
   try {
     await initializeServices();
     const { sessionId } = req.params;
@@ -313,7 +313,7 @@ router.get('/sessions/:sessionId/export', async (req, res) => {
  * GET /api/faculty/:facultyId/sessions
  * Get faculty's session history
  */
-router.get('/:facultyId/sessions', async (req, res) => {
+router.get('/:facultyId/sessions', basicSecurityHeaders, async (req, res) => {
   try {
     await initializeServices();
     const { facultyId } = req.params;

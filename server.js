@@ -29,7 +29,9 @@ const {
   securityHeaders, 
   generateCsrfToken,
   sanitizeInput,
-  csrfErrorHandler 
+  csrfErrorHandler,
+  suspiciousActivityDetection,
+  securityLogger 
 } = require('./middleware/security');
 
 // Initialize WebSocket service
@@ -46,6 +48,8 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Security middleware - applied globally
 app.use(securityHeaders);
+app.use(securityLogger);
+app.use(suspiciousActivityDetection);
 app.use(sanitizeInput);
 
 // Static files with security headers
