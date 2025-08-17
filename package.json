@@ -9,7 +9,9 @@
     "test": "jest",
     "build": "npm run init-db",
     "init-db": "node config/init-db.js",
-    "verify-db": "node scripts/verify-db.js"
+    "verify-db": "node scripts/verify-db.js",
+    "cleanup": "node scripts/cleanup-sessions.js",
+    "dev-clean": "npm run cleanup && npm run dev"
   },
   "keywords": [
     "attendance",

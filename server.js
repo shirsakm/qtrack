@@ -135,11 +135,75 @@ app.use(notFoundHandler);
 // Global error handler (must be last)
 app.use(globalErrorHandler);
 
+// Graceful shutdown handler
+async function gracefulShutdown(signal) {
+  console.log(`\n${signal} received. Starting graceful shutdown...`);
+  
+  try {
+    // Import database service for cleanup
+    const databaseService = require('./services/DatabaseService');
+    
+    // Initialize database if not already done
+    if (!databaseService.isInitialized) {
+      await databaseService.initialize();
+    }
+    
+    // Close all active sessions
+    console.log('Closing all active sessions...');
+    const db = databaseService.getDatabase();
+    const result = await db.run(`
+      UPDATE sessions 
+      SET is_active = 0, end_time = datetime('now') 
+      WHERE is_active = 1
+    `);
+    
+    console.log(`Closed ${result.changes} active session(s)`);
+    
+    // Close database connection
+    if (databaseService.isInitialized) {
+      databaseService.close();
+      console.log('Database connection closed');
+    }
+    
+    // Close server
+    server.close(() => {
+      console.log('HTTP server closed');
+      process.exit(0);
+    });
+    
+    // Force exit after 10 seconds
+    setTimeout(() => {
+      console.log('Force exiting...');
+      process.exit(1);
+    }, 10000);
+    
+  } catch (error) {
+    console.error('Error during graceful shutdown:', error);
+    process.exit(1);
+  }
+}
+
+// Handle shutdown signals
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  gracefulShutdown('UNCAUGHT_EXCEPTION');
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  gracefulShutdown('UNHANDLED_REJECTION');
+});
+
 // Only start server if not in test environment
 if (process.env.NODE_ENV !== 'test') {
   server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
     console.log(`Environment: ${process.env.NODE_ENV}`);
+    console.log('Press Ctrl+C to stop the server gracefully');
   });
 }
 
