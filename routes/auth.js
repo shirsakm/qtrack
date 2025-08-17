@@ -32,13 +32,19 @@ passport.use(new GoogleStrategy({
     
     // Extract email from Google profile
     const email = profile.emails && profile.emails[0] ? profile.emails[0].value : null;
+    console.log('🔍 OAuth Debug - Email from Google:', email);
     
     if (!email) {
+      console.log('❌ OAuth Debug - No email found in Google profile');
       return done(null, false, { message: 'No email found in Google profile' });
     }
 
     // Validate email pattern for heritageit.edu.in domain
-    if (!Student.validateEmailPattern(email)) {
+    const isValidPattern = Student.validateEmailPattern(email);
+    console.log('🔍 OAuth Debug - Email pattern valid:', isValidPattern);
+    
+    if (!isValidPattern) {
+      console.log('❌ OAuth Debug - Invalid email pattern:', email);
       return done(null, false, { 
         message: 'Invalid email format. Must be firstname.lastname.branchyear@heritageit.edu.in' 
       });
@@ -46,7 +52,10 @@ passport.use(new GoogleStrategy({
 
     // Check if student exists in database
     const studentExists = await studentModel.exists(email);
+    console.log('🔍 OAuth Debug - Student exists in DB:', studentExists);
+    
     if (!studentExists) {
+      console.log('❌ OAuth Debug - Student not found in database:', email);
       return done(null, false, { 
         message: 'Student not found in database. Please contact administration.' 
       });
@@ -54,6 +63,7 @@ passport.use(new GoogleStrategy({
 
     // Get student details
     const student = await studentModel.findByEmail(email);
+    console.log('🔍 OAuth Debug - Student found:', student ? student.name : 'null');
     
     // Create user object for session
     const user = {
@@ -66,23 +76,24 @@ passport.use(new GoogleStrategy({
       googleId: profile.id
     };
 
+    console.log('✅ OAuth Debug - Authentication successful for:', user.name);
     return done(null, user);
   } catch (error) {
-    console.error('OAuth authentication error:', error);
+    console.error('❌ OAuth authentication error:', error);
     return done(error, null);
   }
 }));
 
 // Serialize user for session
 passport.serializeUser((user, done) => {
-  done(null, user.id);
+  done(null, user.email); // Use email as the identifier
 });
 
 // Deserialize user from session
-passport.deserializeUser(async (id, done) => {
+passport.deserializeUser(async (email, done) => {
   try {
     await initializeServices();
-    const student = await studentModel.findByEmail(id);
+    const student = await studentModel.findByEmail(email);
     if (student) {
       const user = {
         id: student.id,
