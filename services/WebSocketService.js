@@ -96,7 +96,9 @@ class WebSocketService {
   broadcastAttendanceUpdate(facultyId, sessionId, attendanceData) {
     const updateData = {
       sessionId,
-      attendance: attendanceData,
+      // Unwrap to top-level for front-end compatibility
+      newAttendance: attendanceData.newAttendance,
+      summary: attendanceData.summary,
       timestamp: new Date().toISOString()
     };
 
