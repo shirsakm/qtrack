@@ -43,10 +43,9 @@ class Database {
       
       // Students table (hardcoded data)
       `CREATE TABLE IF NOT EXISTS students (
-        id TEXT PRIMARY KEY,
+        roll_number TEXT PRIMARY KEY,
         email TEXT UNIQUE NOT NULL,
         name TEXT NOT NULL,
-        roll_number TEXT NOT NULL,
         branch TEXT NOT NULL,
         year TEXT NOT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -75,58 +74,73 @@ class Database {
   async insertHardcodedStudents() {
     const students = [
       {
-        id: uuidv4(),
+        roll_number: '2451075',
         email: 'shirsak.majumder.cse28@heritageit.edu.in',
         name: 'Shirsak Majumder',
-        roll_number: 'CSE28001',
         branch: 'CSE',
         year: '2028'
       },
       {
-        id: uuidv4(),
+        roll_number: '2451076',
+        email: 'rohit.kumardebnath.cse28@heritageit.edu.in',
+        name: 'Rohit Kumar Debnath',
+        branch: 'CSE',
+        year: '2028'
+      },
+      {
+        roll_number: '2451077',
+        email: 'shaista.meher.cse28@heritageit.edu.in',
+        name: 'Shaista Meher',
+        branch: 'CSE',
+        year: '2028'
+      },
+      {
+        roll_number: '2451078',
+        email: 'anirban.roy.cse28@heritageit.edu.in',
+        name: 'Anirban Roy',
+        branch: 'CSE',
+        year: '2028'
+      },
+      {
+        roll_number: '2451079',
         email: 'john.doe.cse28@heritageit.edu.in',
         name: 'John Doe',
-        roll_number: 'CSE28002',
         branch: 'CSE',
         year: '2028'
       },
       {
-        id: uuidv4(),
+        roll_number: '2351080',
         email: 'jane.smith.ece27@heritageit.edu.in',
         name: 'Jane Smith',
-        roll_number: 'ECE27001',
         branch: 'ECE',
         year: '2027'
       },
       {
-        id: uuidv4(),
+        roll_number: '2251081',
         email: 'mike.johnson.me26@heritageit.edu.in',
         name: 'Mike Johnson',
-        roll_number: 'ME26001',
         branch: 'ME',
         year: '2026'
       },
       {
-        id: uuidv4(),
+        roll_number: '2451082',
         email: 'sarah.wilson.cse28@heritageit.edu.in',
         name: 'Sarah Wilson',
-        roll_number: 'CSE28003',
         branch: 'CSE',
         year: '2028'
       }
     ];
 
     const insertQuery = `
-      INSERT OR IGNORE INTO students (id, email, name, roll_number, branch, year)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT OR IGNORE INTO students (roll_number, email, name, branch, year)
+      VALUES (?, ?, ?, ?, ?)
     `;
 
     for (const student of students) {
       await this.run(insertQuery, [
-        student.id,
+        student.roll_number,
         student.email,
         student.name,
-        student.roll_number,
         student.branch,
         student.year
       ]);

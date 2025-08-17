@@ -67,7 +67,7 @@ passport.use(new GoogleStrategy({
     
     // Create user object for session
     const user = {
-      id: student.id,
+      id: student.roll_number, // Use roll number as ID
       email: student.email,
       name: student.name,
       rollNumber: student.roll_number,
@@ -96,7 +96,7 @@ passport.deserializeUser(async (email, done) => {
     const student = await studentModel.findByEmail(email);
     if (student) {
       const user = {
-        id: student.id,
+        id: student.roll_number, // Use roll number as ID
         email: student.email,
         name: student.name,
         rollNumber: student.roll_number,

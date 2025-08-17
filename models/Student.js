@@ -9,6 +9,12 @@ class Student {
     return await this.db.get(query, [email]);
   }
 
+  // Find student by roll number
+  async findByRollNumber(rollNumber) {
+    const query = 'SELECT * FROM students WHERE roll_number = ?';
+    return await this.db.get(query, [rollNumber]);
+  }
+
   // Check if student exists
   async exists(email) {
     const student = await this.findByEmail(email);
