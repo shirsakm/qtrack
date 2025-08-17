@@ -129,17 +129,54 @@ router.get('/google/callback', basicSecurityHeaders,
   }),
   (req, res) => {
     // Successful authentication
+    console.log('🔍 OAuth Callback Debug - State:', req.query.state);
+    console.log('🔍 OAuth Callback Debug - Pending Session:', req.session.pendingSessionId);
+    console.log('🔍 OAuth Callback Debug - Pending Token:', req.session.pendingToken);
+    
     // Check if there's a session parameter to redirect to attendance marking
     const sessionId = req.query.state || req.session.pendingSessionId;
+    const token = req.session.pendingToken;
     
     if (sessionId) {
       // Clear the pending session from session storage
       delete req.session.pendingSessionId;
-      // Redirect to attendance marking with session ID
-      res.redirect(`/attendance/mark?session=${sessionId}`);
+      delete req.session.pendingToken;
+      
+      // Redirect to attendance submission with both session and token
+      if (token) {
+        console.log('✅ OAuth Callback Debug - Redirecting to attendance submit');
+        res.redirect(`/attendance/submit?session=${sessionId}&token=${token}`);
+      } else {
+        console.log('✅ OAuth Callback Debug - Redirecting to attendance mark');
+        res.redirect(`/attendance/mark?session=${sessionId}`);
+      }
     } else {
-      // No specific session, redirect to general success page
-      res.redirect('/auth/success');
+      // No specific session, create a simple success page instead of JSON
+      console.log('✅ OAuth Callback Debug - No session, showing success page');
+      res.send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Authentication Successful</title>
+          <style>
+            body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+            .success { color: #4CAF50; font-size: 24px; margin-bottom: 20px; }
+            .info { color: #666; margin-bottom: 30px; }
+            .close-btn { background: #2196F3; color: white; border: none; padding: 12px 24px; border-radius: 5px; cursor: pointer; }
+          </style>
+        </head>
+        <body>
+          <div class="success">✅ Authentication Successful!</div>
+          <div class="info">
+            Welcome, ${req.user.name}<br>
+            Roll Number: ${req.user.rollNumber}<br>
+            Email: ${req.user.email}
+          </div>
+          <button class="close-btn" onclick="window.close()">Close</button>
+          <script>setTimeout(() => window.close(), 5000);</script>
+        </body>
+        </html>
+      `);
     }
   }
 );
