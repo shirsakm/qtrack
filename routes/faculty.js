@@ -3,6 +3,12 @@ const router = express.Router();
 const SessionService = require('../services/SessionService');
 const databaseService = require('../services/DatabaseService');
 const Attendance = require('../models/Attendance');
+const { 
+  csrfProtection, 
+  validateFacultyInput, 
+  validateSessionInput,
+  basicSecurityHeaders 
+} = require('../middleware/security');
 
 // Initialize services (DatabaseService is a singleton)
 let sessionService;
@@ -27,7 +33,7 @@ const initializeServices = async () => {
  * POST /api/faculty/sessions/start
  * Start a new attendance session
  */
-router.post('/sessions/start', async (req, res) => {
+router.post('/sessions/start', basicSecurityHeaders, csrfProtection, validateSessionInput, async (req, res) => {
   try {
     await initializeServices();
     const { facultyId, courseName, courseCode, section } = req.body;
@@ -92,7 +98,7 @@ router.post('/sessions/start', async (req, res) => {
  * POST /api/faculty/sessions/:sessionId/end
  * End an attendance session
  */
-router.post('/sessions/:sessionId/end', async (req, res) => {
+router.post('/sessions/:sessionId/end', basicSecurityHeaders, csrfProtection, validateFacultyInput, async (req, res) => {
   try {
     await initializeServices();
     const { sessionId } = req.params;
@@ -339,7 +345,7 @@ router.get('/:facultyId/sessions', async (req, res) => {
  * POST /api/faculty/sessions/:sessionId/qr/rotate
  * Manually rotate QR code for a session
  */
-router.post('/sessions/:sessionId/qr/rotate', async (req, res) => {
+router.post('/sessions/:sessionId/qr/rotate', basicSecurityHeaders, csrfProtection, validateFacultyInput, async (req, res) => {
   try {
     await initializeServices();
     const { sessionId } = req.params;

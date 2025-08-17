@@ -5,9 +5,11 @@ const Attendance = require('../models/Attendance');
 const SessionService = require('../services/SessionService');
 const { requireAuth } = require('./auth');
 const { 
-  attendanceRateLimit, 
+  attendanceRateLimit,
+  strictAttendanceRateLimit,
   validateAttendanceInput,
-  securityHeaders 
+  attendanceCSRFProtection,
+  basicSecurityHeaders 
 } = require('../middleware/security');
 
 // Initialize services (DatabaseService is a singleton)
@@ -178,7 +180,7 @@ router.get('/submit', requireAuth, async (req, res) => {
  * POST /attendance/mark-secure
  * Enhanced security version of attendance marking with strict validation
  */
-router.post('/mark-secure', securityHeaders, attendanceRateLimit, validateAttendanceInput, async (req, res) => {
+router.post('/mark-secure', basicSecurityHeaders, strictAttendanceRateLimit, attendanceCSRFProtection, validateAttendanceInput, async (req, res) => {
   try {
     await initializeServices();
     const { sessionId, studentEmail, token } = req.body;
@@ -270,7 +272,7 @@ router.post('/mark-secure', securityHeaders, attendanceRateLimit, validateAttend
  * POST /api/attendance/mark
  * Mark attendance for a student (called when student scans QR and authenticates)
  */
-router.post('/mark', securityHeaders, attendanceRateLimit, async (req, res) => {
+router.post('/mark', basicSecurityHeaders, attendanceRateLimit, attendanceCSRFProtection, async (req, res) => {
   try {
     await initializeServices();
     const { sessionId, studentEmail, token } = req.body;

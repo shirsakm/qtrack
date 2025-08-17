@@ -3,6 +3,7 @@ const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const databaseService = require('../services/DatabaseService');
 const Student = require('../models/Student');
+const { csrfProtection, basicSecurityHeaders } = require('../middleware/security');
 
 const router = express.Router();
 
@@ -167,7 +168,7 @@ router.get('/failure', (req, res) => {
 });
 
 // Logout route
-router.post('/logout', (req, res) => {
+router.post('/logout', basicSecurityHeaders, csrfProtection, (req, res) => {
   req.logout((err) => {
     if (err) {
       return res.status(500).json({

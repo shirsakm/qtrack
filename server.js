@@ -23,7 +23,14 @@ const WebSocketService = require('./services/WebSocketService');
 const facultyRoutes = require('./routes/faculty');
 const attendanceRoutes = require('./routes/attendance');
 const { router: authRoutes, passport } = require('./routes/auth');
-const { apiRateLimit, securityHeaders, generateCsrfToken } = require('./middleware/security');
+const { 
+  apiRateLimit, 
+  facultyRateLimit,
+  securityHeaders, 
+  generateCsrfToken,
+  sanitizeInput,
+  csrfErrorHandler 
+} = require('./middleware/security');
 
 // Initialize WebSocket service
 const webSocketService = new WebSocketService(io);
@@ -34,12 +41,18 @@ app.set('webSocketService', webSocketService);
 
 // Basic middleware
 app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Security middleware - applied globally
+app.use(securityHeaders);
+app.use(sanitizeInput);
+
+// Static files with security headers
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Security middleware
-app.use(securityHeaders);
+// Rate limiting for different endpoints
+app.use('/api/faculty', facultyRateLimit);
 app.use('/api/', apiRateLimit);
 
 // Session configuration
@@ -68,6 +81,9 @@ app.use('/api/faculty', facultyRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/attendance', attendanceRoutes); // Student-facing attendance routes
 app.use('/auth', authRoutes);
+
+// CSRF error handler (must be after routes that use CSRF protection)
+app.use(csrfErrorHandler);
 
 // Basic route for testing
 app.get('/', (req, res) => {
