@@ -117,7 +117,26 @@ app.use(csrfErrorHandler);
 
 // Basic route for testing
 app.get('/', (req, res) => {
-  res.send('QR Attendance System - Server Running');
+  res.send(`
+    <h1>🎯 QR Attendance System</h1>
+    <p><strong>Status:</strong> Server Running</p>
+    <p><strong>Environment:</strong> ${process.env.NODE_ENV}</p>
+    <p><strong>Time:</strong> ${new Date().toISOString()}</p>
+    <h2>Available Endpoints:</h2>
+    <ul>
+      <li><a href="/faculty-dashboard.html">Faculty Dashboard</a></li>
+      <li><a href="/api/health">Health Check</a></li>
+      <li><a href="/api/csrf-token">CSRF Token</a></li>
+    </ul>
+    <h2>API Routes:</h2>
+    <ul>
+      <li>POST /api/faculty/sessions/start</li>
+      <li>POST /api/faculty/sessions/:id/end</li>
+      <li>GET /api/faculty/sessions/:id/status</li>
+      <li>POST /api/attendance/mark</li>
+      <li>GET /auth/google</li>
+    </ul>
+  `);
 });
 
 // CSRF token endpoint
@@ -129,13 +148,31 @@ app.get('/api/csrf-token', (req, res) => {
 });
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    activeRooms: webSocketService.getActiveRooms()
-  });
+app.get('/api/health', async (req, res) => {
+  try {
+    const databaseService = require('./services/DatabaseService');
+    const dbHealth = await databaseService.healthCheck();
+    
+    res.json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      database: dbHealth,
+      activeRooms: webSocketService.getActiveRooms(),
+      environment: process.env.NODE_ENV,
+      routes: {
+        faculty: 'Available',
+        attendance: 'Available',
+        auth: 'Available'
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'unhealthy',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // 404 handler for unmatched routes
@@ -207,12 +244,29 @@ process.on('unhandledRejection', (reason, promise) => {
   gracefulShutdown('UNHANDLED_REJECTION');
 });
 
+// Initialize database on startup
+async function initializeApp() {
+  try {
+    const databaseService = require('./services/DatabaseService');
+    await databaseService.initialize();
+    console.log('✅ Database initialized successfully');
+  } catch (error) {
+    console.error('❌ Failed to initialize database:', error);
+    process.exit(1);
+  }
+}
+
 // Only start server if not in test environment
 if (process.env.NODE_ENV !== 'test') {
-  server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`Environment: ${process.env.NODE_ENV}`);
-    console.log('Press Ctrl+C to stop the server gracefully');
+  initializeApp().then(() => {
+    server.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+      console.log(`Environment: ${process.env.NODE_ENV}`);
+      console.log('Press Ctrl+C to stop the server gracefully');
+    });
+  }).catch((error) => {
+    console.error('Failed to start server:', error);
+    process.exit(1);
   });
 }
 
