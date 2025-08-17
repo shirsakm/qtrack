@@ -53,7 +53,7 @@ class QRCodeService {
           sessionId,
           token,
           url: attendanceUrl,
-          qrCodeDataUrl,
+          qrCodeDataURL: qrCodeDataUrl, // Use consistent naming
           qrCodeSvg,
           generatedAt: new Date().toISOString(),
           expiresAt: new Date(Date.now() + 30000).toISOString() // 30 seconds

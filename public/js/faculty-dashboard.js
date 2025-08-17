@@ -10,11 +10,13 @@ class FacultyDashboard {
         this.qrTimer = null;
         this.qrTimeRemaining = 30;
         this.facultyId = 'faculty-001'; // This would come from authentication in real implementation
+        this.csrfToken = null;
         
         this.initializeElements();
         this.initializeEventListeners();
         this.initializeWebSocket();
         this.showConnectionStatus('connecting');
+        this.getCsrfToken();
     }
 
     initializeElements() {
@@ -121,6 +123,18 @@ class FacultyDashboard {
         }
     }
 
+    async getCsrfToken() {
+        try {
+            const response = await fetch('/api/csrf-token');
+            const result = await response.json();
+            if (result.success) {
+                this.csrfToken = result.csrfToken;
+            }
+        } catch (error) {
+            console.error('Failed to get CSRF token:', error);
+        }
+    }
+
     showConnectionStatus(status) {
         // Remove existing status indicator
         const existing = document.querySelector('.connection-status');
@@ -180,6 +194,7 @@ class FacultyDashboard {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-CSRF-Token': this.csrfToken
                 },
                 body: JSON.stringify(sessionData)
             });
@@ -220,6 +235,7 @@ class FacultyDashboard {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-CSRF-Token': this.csrfToken
                 },
                 body: JSON.stringify({ facultyId: this.facultyId })
             });

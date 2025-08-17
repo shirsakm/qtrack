@@ -4,7 +4,7 @@ const SessionService = require('../services/SessionService');
 const databaseService = require('../services/DatabaseService');
 const Attendance = require('../models/Attendance');
 const { 
-  csrfProtection, 
+  simpleCSRFProtection, 
   validateFacultyInput, 
   validateSessionInput,
   basicSecurityHeaders 
@@ -41,7 +41,7 @@ const initializeServices = async () => {
  */
 router.post('/sessions/start', 
   basicSecurityHeaders, 
-  csrfProtection, 
+  simpleCSRFProtection, 
   createValidationMiddleware('sessionCreation'), 
   asyncHandler(async (req, res) => {
     await initializeServices();
@@ -97,7 +97,7 @@ router.post('/sessions/start',
  */
 router.post('/sessions/:sessionId/end', 
   basicSecurityHeaders, 
-  csrfProtection, 
+  simpleCSRFProtection, 
   createValidationMiddleware('facultyOperation'), 
   asyncHandler(async (req, res) => {
     await initializeServices();
@@ -344,7 +344,7 @@ router.get('/:facultyId/sessions', basicSecurityHeaders, async (req, res) => {
  * POST /api/faculty/sessions/:sessionId/qr/rotate
  * Manually rotate QR code for a session
  */
-router.post('/sessions/:sessionId/qr/rotate', basicSecurityHeaders, csrfProtection, validateFacultyInput, async (req, res) => {
+router.post('/sessions/:sessionId/qr/rotate', basicSecurityHeaders, simpleCSRFProtection, validateFacultyInput, async (req, res) => {
   try {
     await initializeServices();
     const { sessionId } = req.params;

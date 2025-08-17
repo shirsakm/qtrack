@@ -72,10 +72,12 @@ app.use('/api/', apiRateLimit);
 app.use(session({
   secret: process.env.SESSION_SECRET || 'fallback-secret-key',
   resave: false,
-  saveUninitialized: false,
+  saveUninitialized: true, // Changed to true for CSRF to work
   cookie: {
     secure: process.env.NODE_ENV === 'production',
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    httpOnly: true,
+    sameSite: 'lax' // Allow same-site requests
   }
 }));
 
@@ -89,6 +91,12 @@ app.use(flash());
 // CSRF token generation
 app.use(generateCsrfToken);
 
+// Add CSRF token to all responses
+app.use((req, res, next) => {
+  res.locals.csrfToken = req.session.csrfToken;
+  next();
+});
+
 // API Routes
 app.use('/api/faculty', facultyRoutes);
 app.use('/api/attendance', attendanceRoutes);
@@ -101,6 +109,14 @@ app.use(csrfErrorHandler);
 // Basic route for testing
 app.get('/', (req, res) => {
   res.send('QR Attendance System - Server Running');
+});
+
+// CSRF token endpoint
+app.get('/api/csrf-token', (req, res) => {
+  res.json({ 
+    csrfToken: req.session.csrfToken,
+    success: true 
+  });
 });
 
 // Health check endpoint
