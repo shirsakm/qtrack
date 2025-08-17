@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faculty Dashboard - QR Attendance System</title>
+    <link rel="stylesheet" href="/css/faculty-dashboard.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <header class="dashboard-header">
+            <h1>Faculty Attendance Dashboard</h1>
+            <div class="faculty-info">
+                <span id="facultyName">Faculty Member</span>
+                <span id="facultyId" style="display: none;">faculty-001</span>
+            </div>
+        </header>
+
+        <main class="dashboard-main">
+            <!-- Session Control Panel -->
+            <section class="session-control">
+                <h2>Session Control</h2>
+                <div class="session-form" id="sessionForm">
+                    <div class="form-group">
+                        <label for="courseName">Course Name:</label>
+                        <input type="text" id="courseName" placeholder="e.g., Computer Networks" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="courseCode">Course Code:</label>
+                        <input type="text" id="courseCode" placeholder="e.g., CSE301" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="section">Section:</label>
+                        <input type="text" id="section" placeholder="e.g., A" required>
+                    </div>
+                    <button id="startSessionBtn" class="btn btn-primary">Start Attendance Session</button>
+                </div>
+
+                <div class="session-active" id="sessionActive" style="display: none;">
+                    <div class="session-info">
+                        <h3 id="activeSessionTitle">Active Session</h3>
+                        <p><strong>Course:</strong> <span id="activeCourse"></span></p>
+                        <p><strong>Section:</strong> <span id="activeSection"></span></p>
+                        <p><strong>Started:</strong> <span id="sessionStartTime"></span></p>
+                        <p><strong>Session ID:</strong> <span id="activeSessionId"></span></p>
+                    </div>
+                    <button id="endSessionBtn" class="btn btn-danger">End Session</button>
+                </div>
+            </section>
+
+            <!-- QR Code Display -->
+            <section class="qr-section">
+                <h2>QR Code</h2>
+                <div class="qr-container" id="qrContainer">
+                    <div class="qr-placeholder">
+                        <p>Start a session to generate QR code</p>
+                    </div>
+                </div>
+                <div class="qr-timer" id="qrTimer" style="display: none;">
+                    <div class="timer-bar">
+                        <div class="timer-progress" id="timerProgress"></div>
+                    </div>
+                    <p>QR code refreshes in <span id="timerText">30</span> seconds</p>
+                </div>
+            </section>
+
+            <!-- Attendance List -->
+            <section class="attendance-section">
+                <h2>Real-time Attendance</h2>
+                <div class="attendance-summary" id="attendanceSummary">
+                    <div class="summary-item">
+                        <span class="summary-label">Present:</span>
+                        <span class="summary-value" id="presentCount">0</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Total:</span>
+                        <span class="summary-value" id="totalCount">0</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Percentage:</span>
+                        <span class="summary-value" id="attendancePercentage">0%</span>
+                    </div>
+                </div>
+                
+                <div class="attendance-controls">
+                    <button id="refreshAttendanceBtn" class="btn btn-secondary">Refresh</button>
+                    <button id="exportBtn" class="btn btn-success" disabled>Export Data</button>
+                </div>
+
+                <div class="attendance-list" id="attendanceList">
+                    <div class="attendance-placeholder">
+                        <p>No attendance records yet</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Status Messages -->
+        <div class="status-messages" id="statusMessages"></div>
+
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+            <div class="loading-spinner"></div>
+            <p>Processing...</p>
+        </div>
+    </div>
+
+    <!-- Socket.io for real-time updates -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/js/faculty-dashboard.js"></script>
+</body>
+</html>
