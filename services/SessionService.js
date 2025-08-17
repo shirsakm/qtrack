@@ -2,9 +2,13 @@ const Session = require('../models/Session');
 const QRCodeService = require('./QRCodeService');
 
 class SessionService {
-  constructor(database, baseUrl = 'http://localhost:3000') {
+  constructor(database, baseUrl = null) {
     this.sessionModel = new Session(database);
-    this.qrCodeService = new QRCodeService(baseUrl);
+    // Determine base URL based on environment
+    const defaultBaseUrl = process.env.NODE_ENV === 'production' 
+      ? 'https://qtrack-kwqi.onrender.com' 
+      : 'http://localhost:3000';
+    this.qrCodeService = new QRCodeService(baseUrl || defaultBaseUrl);
   }
 
   /**

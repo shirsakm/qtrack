@@ -273,10 +273,14 @@ class FacultyDashboard {
         
         this.qrContainer.innerHTML = `
             <div class="qr-code">
-                <img src="${qrData.qrCodeDataURL}" alt="QR Code for Attendance" />
+                <a href="${qrData.url}" target="_blank" title="Click to test attendance (opens in new tab)">
+                    <img src="${qrData.qrCodeDataURL}" alt="QR Code for Attendance" style="cursor: pointer;" />
+                </a>
                 <div class="qr-info">
                     <p><strong>Session:</strong> ${this.currentSession?.courseName || 'Active Session'}</p>
                     <p><strong>Valid until:</strong> ${new Date(qrData.expiresAt).toLocaleTimeString()}</p>
+                    <p><small>💡 <strong>Testing:</strong> Click the QR code to test attendance flow</small></p>
+                    <p><small>🔗 <strong>URL:</strong> <a href="${qrData.url}" target="_blank">${qrData.url}</a></small></p>
                 </div>
             </div>
         `;

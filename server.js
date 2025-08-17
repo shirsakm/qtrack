@@ -97,6 +97,15 @@ app.use((req, res, next) => {
   next();
 });
 
+// QR Code attendance route (must be before other routes)
+app.get('/attend/:sessionId', (req, res) => {
+  const { sessionId } = req.params;
+  const { token } = req.query;
+  
+  // Redirect to attendance marking route with session and token
+  res.redirect(`/attendance/mark?session=${sessionId}&token=${token}`);
+});
+
 // API Routes
 app.use('/api/faculty', facultyRoutes);
 app.use('/api/attendance', attendanceRoutes);
