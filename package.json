@@ -22,6 +22,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+  "connect-sqlite3": "^0.9.15",
     "connect-flash": "^0.1.1",
     "cors": "^2.8.5",
     "csurf": "^1.11.0",

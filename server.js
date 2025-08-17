@@ -6,6 +6,7 @@ const path = require('path');
 const cors = require('cors');
 const session = require('express-session');
 const flash = require('connect-flash');
+const SQLiteStore = require('connect-sqlite3')(session);
 
 const app = express();
 const server = http.createServer(app);
@@ -17,6 +18,10 @@ const io = socketIo(server, {
 });
 
 const PORT = process.env.PORT || 3000;
+
+// Trust the first proxy (e.g., Render/Heroku/Nginx) so req.ip and req.secure are correct
+// This is required for express-rate-limit and secure cookies behind HTTPS terminators
+app.set('trust proxy', process.env.TRUST_PROXY ? parseInt(process.env.TRUST_PROXY, 10) : 1);
 
 // Import services and routes
 const WebSocketService = require('./services/WebSocketService');
@@ -73,6 +78,15 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'fallback-secret-key',
   resave: false,
   saveUninitialized: true, // Changed to true for CSRF to work
+  // Honor X-Forwarded-* headers when setting secure cookies behind a proxy
+  proxy: true,
+  store: new SQLiteStore({
+    // Store sessions in a file under config/ to persist during runtime
+    dir: process.env.SESSION_DIR || path.join(__dirname, 'config'),
+    db: process.env.SESSION_DB || 'sessions.sqlite',
+    // TTL in ms (defaults ~1 day). Keep aligned with cookie maxAge
+    ttl: 24 * 60 * 60 * 1000
+  }),
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
