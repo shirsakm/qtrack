@@ -155,6 +155,10 @@ app.get('/', (req, res) => {
 
 // CSRF token endpoint
 app.get('/api/csrf-token', (req, res) => {
+  // Prevent caching to avoid stale tokens
+  res.set('Cache-Control', 'no-store');
+  // Also surface in a response header for debugging/tools
+  res.set('X-CSRF-Token', req.session.csrfToken || '');
   res.json({ 
     csrfToken: req.session.csrfToken,
     success: true 

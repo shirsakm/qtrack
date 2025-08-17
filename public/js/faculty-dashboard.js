@@ -125,7 +125,7 @@ class FacultyDashboard {
 
     async getCsrfToken() {
         try {
-            const response = await fetch('/api/csrf-token');
+            const response = await fetch('/api/csrf-token', { cache: 'no-store' });
             const result = await response.json();
             if (result.success) {
                 this.csrfToken = result.csrfToken;
@@ -246,7 +246,27 @@ class FacultyDashboard {
                 this.handleSessionEnded(result.session);
                 this.showMessage('Attendance session ended successfully!', 'success');
             } else {
-                this.showMessage(result.error || 'Failed to end session', 'error');
+                // If CSRF failed, refresh token and retry once
+                if (result.error && result.error.code === 'CSRF_TOKEN_INVALID') {
+                    await this.getCsrfToken();
+                    const retry = await fetch(`/api/faculty/sessions/${this.currentSession.id}/end`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': this.csrfToken
+                        },
+                        body: JSON.stringify({ facultyId: this.facultyId })
+                    });
+                    const retryResult = await retry.json();
+                    if (retryResult.success) {
+                        this.handleSessionEnded(retryResult.session);
+                        this.showMessage('Attendance session ended successfully!', 'success');
+                    } else {
+                        this.showMessage(retryResult.error || 'Failed to end session', 'error');
+                    }
+                } else {
+                    this.showMessage(result.error || 'Failed to end session', 'error');
+                }
             }
         } catch (error) {
             console.error('Error ending session:', error);
